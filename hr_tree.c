@@ -648,7 +648,7 @@ walk:
                     break;
                 }
             }
-        } else if ( path->data == prefix.data && path->len == prefix.len) {
+        } else if (path->len == prefix.len && hr_strncmp(path->data, prefix.data, path->len) == 0) {
             printf(" ------- %s ------- \n", n->full_path.data);
             for (int i = 0; i < n->indices.len; i++) {
                 if (n->indices.data[i] == '/') {
