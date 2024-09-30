@@ -167,9 +167,14 @@ hr_node_t *get_child_node(hr_array_t *children, int pos) {
 }
 
 void swap_node(hr_node_t* a, hr_node_t* b) {
-    hr_node_t temp = *a;
-    *a = *b;
-    *b = temp;
+    size_t len = sizeof(hr_node_t);
+    hr_node_t *temp = hr_alloc(len);
+
+    hr_memzero(temp, len);
+    hr_memcpy(temp, a, len);
+    
+    hr_memcpy(a, b, len);
+    hr_memcpy(b, temp, len);
 }
 
 int hr_increment_child_priority(hr_node_t *n, int pos) {
@@ -191,16 +196,19 @@ int hr_increment_child_priority(hr_node_t *n, int pos) {
     new_pos = pos;
     elements = (hr_node_t *)cs->elts;
     for (el = elements + (new_pos - 1); new_pos > 0 && el->priority < prio; new_pos--) {
-        swap_node(&((hr_node_t *)cs->elts)[new_pos - 1], &((hr_node_t *)cs->elts)[new_pos]);
+        // printf(".... new_pos - 1: %s new_pos: %s", elements[new_pos - 1].path.data, elements[new_pos].path.data);
+        // swap_node(&elements[new_pos - 1], &elements[new_pos]);
     }
 
-    hr_rebuild_indices(n, pos, new_pos);
+    // hr_rebuild_indices(n, pos, new_pos);
     
     return new_pos;
 }
 
 void insert_child(hr_pool_t *pool, hr_node_t *n, hr_str_t path, hr_str_t full) {
     hr_node_t *child = NULL;
+    hr_array_t *children = NULL;
+
     for (;;) {
         hr_wildcard_t wildcard = hr_find_wildcard(&path);
         int i = wildcard.i;
@@ -240,8 +248,8 @@ void insert_child(hr_pool_t *pool, hr_node_t *n, hr_str_t path, hr_str_t full) {
             }
 
             n->wildchild = 1;
-            
-            child = hr_array_push(n->children);
+            children = hr_array_create(pool, 1, sizeof(hr_node_t));
+            child = hr_array_push(children);
             child = hr_node_init(pool, child);
             if (child == NULL) {
                 break;
@@ -250,6 +258,7 @@ void insert_child(hr_pool_t *pool, hr_node_t *n, hr_str_t path, hr_str_t full) {
             child->node_type = PARAM;
             child->path = wildcard.wildcard;
             child->full_path = full;
+            n->children = children;
 
             n = child;
             n->priority++;
@@ -258,13 +267,15 @@ void insert_child(hr_pool_t *pool, hr_node_t *n, hr_str_t path, hr_str_t full) {
                 path.data = path.data + wildcard.wildcard.len;
                 path.len = path.len - wildcard.wildcard.len;
 
-                child = hr_array_push(n->children);
+                children = hr_array_create(pool, 1, sizeof(hr_node_t));
+                child = hr_array_push(children);
                 child = hr_node_init(pool, child);
                 if (child == NULL) {
                     break;
                 }
                 child->priority = 1;
                 child->full_path = full;
+                n->children = children;
 
                 n = child;
                 continue;
@@ -300,7 +311,8 @@ void insert_child(hr_pool_t *pool, hr_node_t *n, hr_str_t path, hr_str_t full) {
         path.len = i;
 
         // First node: catchAll node with empty path
-        child = hr_array_push(n->children);
+        children = hr_array_create(pool, 1, sizeof(hr_node_t));
+        child = hr_array_push(children);
         child = hr_node_init(pool, child);
         if (child == NULL) {
             printf("First node: catchAll node with empty path");
@@ -310,12 +322,14 @@ void insert_child(hr_pool_t *pool, hr_node_t *n, hr_str_t path, hr_str_t full) {
         child->node_type = CATCHALL;
         child->full_path = full;
         n->indices = (hr_str_t)hr_string("/");
+        n->children = children;
 
         n = child;
         n->priority++;
 
         // second node: node holding the variable
-        child = hr_array_push(n->children);
+        children = hr_array_create(pool, 1, sizeof(hr_node_t));
+        child = hr_array_push(children);
         child = hr_node_init(pool, child);
         if (child == NULL) {
             printf("second node: node holding the variable");
@@ -327,6 +341,7 @@ void insert_child(hr_pool_t *pool, hr_node_t *n, hr_str_t path, hr_str_t full) {
         child->node_type = CATCHALL;
         child->priority = 1;
         child->full_path = full;
+        n->children = children;
         return;
     }
 
@@ -408,7 +423,7 @@ walk:
             for (int i = 0, max = n->indices.len; i < max; i++) {
                 if (c == n->indices.data[i]) {
                     parentFullPathIndex += n->path.len;
-                    // i = hr_increment_child_priority(pool, n, i);
+                    i = hr_increment_child_priority(n, i);
                     n = get_child_node(n->children, i);
                     goto walk;
                 }
@@ -424,7 +439,7 @@ walk:
                     return;
                 }
                 child->full_path = full_path;
-                // hr_increment_child_priority(pool, n, n->indices.len - 1);
+                hr_increment_child_priority(n, n->indices.len - 1);
                 n = child;
             } else if (n->wildchild) {
                 n = get_child_node(n->children, n->children->nelts - 1);
