@@ -42,7 +42,7 @@ int main(int argc, char const *argv[])
     demo->indices.data = hr_copy(demo->indices.data, (hr_u_char *)"123456", 6);
     demo->indices.len = 6;
 
-    hr_rebuild_indices(demo, 3, 2);
+    hr_rebuild_indices(pool, demo, 3, 2);
 
     printf("______ %s: %lu _____\n", demo->indices.data, demo->indices.len);
    
@@ -92,6 +92,52 @@ int main(int argc, char const *argv[])
         hr_router_param_t *elements = router_params->elts;
         printf("..... %s(%lu): %s ....\n", (elements+pos)->key.data, (elements+pos)->key.len, (elements+pos)->value.data);
     }
+
+
+    hr_node_t *tmp = hr_palloc(pool, sizeof(hr_node_t));
+    tmp->children = hr_array_create(pool, 2, sizeof(hr_node_t));
+    tmp->path = (hr_str_t)hr_string("/");
+    tmp->indices.data = (hr_u_char *)hr_palloc(pool, 3); 
+    tmp->indices.len = 3;  
+    tmp->indices.data[0] = 'd';
+    tmp->indices.data[1] = 'c';
+    tmp->indices.data[2] = 'a';
+    hr_u_char d[3] = {'d', 'c','a'};
+    hr_node_t *tmp2 ;
+    for (int i = 0; i < 3; i++) {
+        tmp2 = hr_array_push(tmp->children);
+        // hr_node_t *tmp2 = hr_palloc(pool, sizeof(hr_node_t));
+        hr_u_char *data = hr_palloc(pool, 3);
+        data[0] = '/';
+        data[1] = d[i];
+        data[2] = '\0';
+        tmp2->path = (hr_str_t)hr_string(data);
+        tmp2->path.len = 2;
+
+
+        hr_u_char *data2 = hr_palloc(pool, 2);
+        data2[0] = d[i];
+        data2[1] = '\0';
+        tmp2->indices = (hr_str_t)hr_string(data2);
+        tmp2->indices.len = 1;
+        tmp2->priority += i;
+        printf("....... %s (%lu): %s(%lu)  %d.....\n", tmp2->path.data, tmp2->path.len, tmp2->indices.data, tmp2->indices.len, tmp2->priority);
+
+        hr_increment_child_priority(pool, tmp, tmp2->priority);
+    }
+
+    // 
+
+    printf("================= sorted ================\n");
+
+
+    printf(" path: %s, indices: %s  children_len: %d \n", tmp->path.data, tmp->indices.data, tmp->children->nelts);
+
+    for (int pos = 0; pos < tmp->children->nelts; pos++) {
+        hr_node_t *elems = tmp->children->elts;
+        printf("..... %s(%lu) ....\n", (elems+pos)->path.data, (elems+pos)->path.len);
+    }
+
 
     // =========== destroy pool ===================
     hr_destroy_pool(pool);

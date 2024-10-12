@@ -50,8 +50,8 @@ hr_node_t *hr_create_node(hr_pool_t *pool);
 hr_wildcard_t hr_find_wildcard(hr_str_t *path);
 uint16_t hr_count_params(hr_str_t *path);
 void add_route(hr_pool_t *pool, hr_node_t *n, hr_str_t path);
-void hr_rebuild_indices(hr_node_t *n, int pos, int new_pos);
-int hr_increment_child_priority(hr_node_t *n, int pos);
+void hr_rebuild_indices(hr_pool_t *pool, hr_node_t *n, int pos, int new_pos);
+int hr_increment_child_priority(hr_pool_t *pool, hr_node_t *n, int pos);
 
 void get_value(hr_pool_t *pool, hr_node_t *n, hr_str_t *path, hr_array_t *router_params);
 

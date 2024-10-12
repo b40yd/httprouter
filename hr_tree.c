@@ -116,7 +116,7 @@ uint16_t hr_count_sections(hr_str_t *path) {
 }
 
 // Build new index char string
-void hr_rebuild_indices(hr_node_t *n, int pos, int new_pos) {
+void hr_rebuild_indices(hr_pool_t *pool, hr_node_t *n, int pos, int new_pos) {
     if (n == NULL || n->indices.data == NULL) {
         return;
     }
@@ -129,7 +129,7 @@ void hr_rebuild_indices(hr_node_t *n, int pos, int new_pos) {
     if (new_pos != pos) {
 
         hr_u_char *str = n->indices.data;
-        hr_u_char result[len + 1];
+        hr_u_char *result = hr_palloc(pool, len + 1);
         int i, j = 0;
 
         for (i = 0; i < new_pos; i++) {
@@ -151,7 +151,7 @@ void hr_rebuild_indices(hr_node_t *n, int pos, int new_pos) {
 
         result[j] = '\0';
         
-        hr_memcpy(n->indices.data, result, len);
+        // hr_memcpy(n->indices.data, result, len);
         n->indices.data = result;
         n->indices.len = len;
     }
@@ -167,17 +167,12 @@ hr_node_t *get_child_node(hr_array_t *children, int pos) {
 }
 
 void swap_node(hr_node_t* a, hr_node_t* b) {
-    size_t len = sizeof(hr_node_t);
-    hr_node_t *temp = hr_alloc(len);
-
-    hr_memzero(temp, len);
-    hr_memcpy(temp, a, len);
-    
-    hr_memcpy(a, b, len);
-    hr_memcpy(b, temp, len);
+    hr_node_t temp = *a;
+    *a = *b;
+    *b = temp;
 }
 
-int hr_increment_child_priority(hr_node_t *n, int pos) {
+int hr_increment_child_priority(hr_pool_t *pool, hr_node_t *n, int pos) {
     hr_array_t *cs = n->children;
     uint32_t prio = 0;
     int new_pos = 0;
@@ -195,12 +190,11 @@ int hr_increment_child_priority(hr_node_t *n, int pos) {
 
     new_pos = pos;
     elements = (hr_node_t *)cs->elts;
-    for (el = elements + (new_pos - 1); new_pos > 0 && el->priority < prio; new_pos--) {
-        // printf(".... new_pos - 1: %s new_pos: %s", elements[new_pos - 1].path.data, elements[new_pos].path.data);
-        // swap_node(&elements[new_pos - 1], &elements[new_pos]);
+    for (; new_pos > 0 && elements[new_pos - 1].priority < prio; new_pos--) {
+        swap_node(&elements[new_pos - 1], &elements[new_pos]);
     }
-
-    // hr_rebuild_indices(n, pos, new_pos);
+    
+    hr_rebuild_indices(pool, n, pos, new_pos);
     
     return new_pos;
 }
@@ -423,7 +417,7 @@ walk:
             for (int i = 0, max = n->indices.len; i < max; i++) {
                 if (c == n->indices.data[i]) {
                     parentFullPathIndex += n->path.len;
-                    i = hr_increment_child_priority(n, i);
+                    i = hr_increment_child_priority(pool, n, i);
                     n = get_child_node(n->children, i);
                     goto walk;
                 }
@@ -439,7 +433,7 @@ walk:
                     return;
                 }
                 child->full_path = full_path;
-                hr_increment_child_priority(n, n->indices.len - 1);
+                hr_increment_child_priority(pool, n, n->indices.len - 1);
                 n = child;
             } else if (n->wildchild) {
                 n = get_child_node(n->children, n->children->nelts - 1);
