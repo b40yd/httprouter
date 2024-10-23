@@ -66,7 +66,7 @@ int main(int argc, char const *argv[])
     add_route(pool, node, (hr_str_t)hr_string("/hello/test/:demo"));
     add_route(pool, node, (hr_str_t)hr_string("/1/hello/test/:demo"));
     add_route(pool, node, (hr_str_t)hr_string("/2/hello/test/:demo"));
-    add_route(pool, node, (hr_str_t)hr_string("/2/hello1/:test/:demo"));
+    add_route(pool, node, (hr_str_t)hr_string("/3/hello1/:test3/:demo3"));
 
     add_route(pool, node, (hr_str_t)hr_string("/www.a.com/test/:hello"));
     add_route(pool, node, (hr_str_t)hr_string("/www.a.com/2/hello/:test1/:hello1"));
@@ -83,7 +83,7 @@ int main(int argc, char const *argv[])
     get_value(pool, node, &(hr_str_t)hr_string("/2/hello/test/hello"), router_params);
 
     get_value(pool, node, &(hr_str_t)hr_string("/2/hello/test/bao"), router_params);
-    get_value(pool, node, &(hr_str_t)hr_string("/2/hello/test/bao"), router_params);
+    get_value(pool, node, &(hr_str_t)hr_string("/3/hello1/test/bao"), router_params);
 
     get_value(pool, node, &(hr_str_t)hr_string("/www.a.com/test/:hell1o"), router_params);
     get_value(pool, node, &(hr_str_t)hr_string("/www.a.com/2/hello/2/4"), router_params);
@@ -131,7 +131,7 @@ int main(int argc, char const *argv[])
     printf("================= sorted ================\n");
 
 
-    printf(" path: %s, indices: %s  children_len: %d \n", tmp->path.data, tmp->indices.data, tmp->children->nelts);
+    printf(" path: %s, indices: %s  children_len: %lu \n", tmp->path.data, tmp->indices.data, tmp->children->nelts);
 
     for (int pos = 0; pos < tmp->children->nelts; pos++) {
         hr_node_t *elems = tmp->children->elts;

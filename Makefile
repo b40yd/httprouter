@@ -1,26 +1,37 @@
-# Makefile
+# Compiler and flags
 CC = gcc
+CFLAGS = -Wall -Iinclude
 
-CFLAGS = -std=c99 -Wall -g
+# Directories
+SRCDIR = src
+BUILDDIR = build
+INCDIR = include
 
-SRCS = httprouter.c \
-hr_tree.c \
-hr_string.c \
-hr_palloc.c \
-hr_array.c \
-utils.c
+# Source files
+SRCS = $(wildcard $(SRCDIR)/*.c)
+OBJS = $(patsubst $(SRCDIR)/%.c, $(BUILDDIR)/%.o, $(SRCS))
 
-OBJS = $(SRCS:.c=.o)
+# Target executable
+TARGET = $(BUILDDIR)/httprouter
 
-TARGET = httprouter
-
+# Default target
 all: $(TARGET)
 
+# Link the target executable
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
 
-%.o: %.c
+# Compile source files to object files
+$(BUILDDIR)/%.o: $(SRCDIR)/%.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Create build directory if it doesn't exist
+$(BUILDDIR):
+	mkdir -p $(BUILDDIR)
+
+# Clean up build artifacts
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -rf $(BUILDDIR)
+
+# Phony targets
+.PHONY: all clean
